@@ -80,8 +80,8 @@ test('相同動畫時間在 60Hz 與 120Hz 更新下得到相同比例', () => {
   expect(sixty.pose.scaleX).toBeCloseTo(oneTwenty.pose.scaleX, 10); expect(sixty.pose.scaleY).toBeCloseTo(oneTwenty.pose.scaleY, 10);
 });
 
-for (const style of ['cute', 'weird', 'pixel', 'soft3d']) test(`十種 ${style} 的落地 Q 彈、底部支點與剛體尺寸不變`, async ({ page }, testInfo) => {
-  for (const shape of ['classic', 'tall', 'flat', 'tilted', 'double', 'mushroom', 'longface', 'burst', 'platform', 'oddball']) {
+for (const style of ['cute', 'weird', 'pixel', 'soft3d']) {
+  for (const shape of ['classic', 'tall', 'flat', 'tilted', 'double', 'mushroom', 'longface', 'burst', 'platform', 'oddball']) test(`${style} / ${shape} 的落地 Q 彈、底部支點與剛體尺寸不變`, async ({ page }, testInfo) => {
     await page.goto(`http://127.0.0.1:5173/?e2e&shape=${shape}&style=${style}`); await page.waitForFunction(() => !!window.__PUDDING_TEST__);
     await page.getByRole('button', { name: /開始遊戲/ }).click(); await page.locator('canvas').tap({ position: { x: 195, y: 420 } });
     const frames = await page.evaluate(() => {
@@ -107,8 +107,8 @@ for (const style of ['cute', 'weird', 'pixel', 'soft3d']) test(`十種 ${style} 
       expect(visualX, shape).toBeCloseTo(physicalX, 7); expect(visualY, shape).toBeCloseTo(physicalY, 7);
     }
     if (shape === 'classic') await page.screenshot({ path: testInfo.outputPath(`${style}-settled.png`) });
-  }
-});
+  });
+}
 
 test('新布丁主撞擊與直接承重鄰居的弱連鎖有明顯強弱差', async ({ page }) => {
   await page.goto('http://127.0.0.1:5173/?e2e'); await page.waitForFunction(() => !!window.__PUDDING_TEST__); await page.getByRole('button', { name: /開始遊戲/ }).click();

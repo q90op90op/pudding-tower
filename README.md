@@ -31,7 +31,7 @@ npm.cmd run dev
 
 ```powershell
 npm.cmd run build             # TypeScript + Vite，輸出 dist/
-npm.cmd test                  # 31 項 Edge 遊戲、分享與 Q 彈回歸測試
+npm.cmd test                  # 67 項 Edge 遊戲、分享與 Q 彈回歸測試
 npm.cmd run test:production   # 正式子路徑、實際計分與 PNG 下載
 npm.cmd run preview           # http://localhost:4173/pudding-tower/
 npm.cmd run assets            # 用既有 Canvas 源碼重新輸出透明素材
