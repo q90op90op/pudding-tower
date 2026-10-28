@@ -34,9 +34,18 @@ try {
   await page.locator('canvas').tap({ position: { x: 195, y: 420 } });
   await page.waitForFunction(() => document.querySelector('#score')?.textContent === '1', undefined, { timeout: 10000 });
   await page.screenshot({ path: 'test-results/production/gameplay.png' });
-  await page.waitForTimeout(450);
-  await page.locator('canvas').tap({ position: { x: 195, y: 420 } });
-  await page.getByRole('button', { name: /再玩一次/ }).waitFor({ timeout: 15000 });
+  // Continue real input until a natural loss; a fixed wall-clock delay cannot
+  // predict the swing phase on a software-rendered or throttled browser.
+  for (let attempt = 0; attempt < 8; attempt++) {
+    if (await page.getByRole('button', { name: /再玩一次/ }).isVisible()) break;
+    const previousScore = Number(await page.locator('#score').textContent());
+    await page.waitForTimeout(450 + attempt * 90);
+    await page.locator('canvas').tap({ position: { x: 195, y: 420 } });
+    await page.waitForFunction(score =>
+      Number(document.querySelector('#score')?.textContent) > score ||
+      !!document.querySelector('#restart'), previousScore, { timeout: 45000 });
+  }
+  await page.getByRole('button', { name: /再玩一次/ }).waitFor({ timeout: 45000 });
   const preview = page.getByRole('button', { name: '預覽分享卡' });
   await page.waitForFunction(() => !document.querySelector('#preview-card')?.disabled);
   await page.screenshot({ path: 'test-results/production/result.png' });
