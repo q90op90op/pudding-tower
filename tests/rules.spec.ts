@@ -23,3 +23,16 @@ test('短暫擦過平台但重心已在支撐面外，不算有效堆疊', () =>
   expect([...supportedBodies({ id: 0, y: 750, minX: 87, maxX: 303 },
     [{ id: 1, y: 710, x: 319 }], [{ a: 0, b: 1, normalY: 1 }])]).toEqual([0]);
 });
+test('跨在兩顆並排布丁上的角色，可合併已連通的承重範圍', () => {
+  const plate = { id: 0, y: 750, minX: 87, maxX: 303 };
+  const bodies = [
+    { id: 1, y: 716, x: 140, minX: 95, maxX: 185 },
+    { id: 2, y: 716, x: 250, minX: 205, maxX: 295 },
+    { id: 3, y: 662, x: 195, minX: 150, maxX: 240 },
+  ];
+  const contacts = [{ a: 0, b: 1, normalY: 1 }, { a: 0, b: 2, normalY: 1 }, { a: 1, b: 3, normalY: 1 }, { a: 2, b: 3, normalY: 1 }];
+  expect([...supportedBodies(plate, bodies, contacts)]).toEqual([0, 1, 2, 3]);
+  // A floating support cannot extend the valid footprint; side contact cannot carry weight.
+  expect(supportedBodies(plate, bodies, contacts.filter(c => !(c.a === 0 && c.b === 2))).has(3)).toBe(false);
+  expect(supportedBodies(plate, bodies, contacts.map(c => c.a === 2 && c.b === 3 ? { ...c, normalY: 0.1 } : c)).has(3)).toBe(false);
+});

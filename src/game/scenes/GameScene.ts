@@ -4,6 +4,7 @@ import { chooseExpression, choosePudding, chooseStyle, definitionFor, EXPRESSION
 import { Pudding, PuddingView } from '../entities/Pudding';
 import { cameraTarget, outsideWorld, supportedBodies } from '../systems/rules';
 import { physicalContacts } from '../systems/contacts';
+import { LandingConfirmation } from '../systems/LandingConfirmation';
 import { Records } from '../systems/records';
 import { SoundSystem } from '../systems/SoundSystem';
 import { GameOverlay } from '../ui/GameOverlay';
@@ -27,7 +28,7 @@ export class GameScene extends Phaser.Scene {
   private clock = 0;
   private swingTime = 0;
   private accumulator = 0;
-  private confirmation = 0;
+  private readonly confirmation = new LandingConfirmation(TUNING.confirmationMs, TUNING.landingGraceMs);
   private fallingTime = 0;
   private failureTime = 0;
   private collapseTime = 0;
@@ -65,7 +66,7 @@ export class GameScene extends Phaser.Scene {
     for (const pudding of this.puddings) pudding.destroy(this); this.puddings = [];
     for (const effect of this.effectObjects) effect.destroy(); this.effectObjects.clear(); this.tweens.killAll();
     this.pending?.view.destroy(); this.pending = undefined; this.active = undefined; this.score = 0; this.initialBest = this.records.best; this.bestTowerSnapshot = null;
-    this.confirmation = this.fallingTime = this.failureTime = this.collapseTime = this.accumulator = this.clock = this.serial = 0;
+    this.confirmation.reset(); this.fallingTime = this.failureTime = this.collapseTime = this.accumulator = this.clock = this.serial = 0;
     this.cameras.main.setScroll(0, 0); this.overlay.playing(); this.spawn();
   }
   private towerTop(): number { return Math.min(WORLD.plateY - WORLD.plateHeight / 2, ...this.puddings.filter(p => p.scored).map(p => p.body.bounds.min.y)); }
@@ -93,7 +94,7 @@ export class GameScene extends Phaser.Scene {
     if (this.state !== 'READY' || !this.pending || document.hidden) return;
     const { definition, identity, x, y, angle, view } = this.pending; view.destroy(); this.pending = undefined; this.guide.clear();
     this.active = new Pudding(this, definition, identity, x, y, angle); this.puddings.push(this.active);
-    this.state = 'FALLING'; this.confirmation = this.fallingTime = 0; this.sfx.play('drop'); this.updateOverlay();
+    this.state = 'FALLING'; this.confirmation.reset(); this.fallingTime = 0; this.sfx.play('drop'); this.updateOverlay();
   }
   update(_time: number, delta: number): void {
     if (this.manual || this.state === 'MENU' || this.state === 'GAME_OVER' || document.hidden) return;
@@ -124,9 +125,9 @@ export class GameScene extends Phaser.Scene {
     const supported = supportedBodies({ id: this.plate.id, y: this.plate.position.y, minX: this.plate.bounds.min.x, maxX: this.plate.bounds.max.x }, bodies, contacts);
     const b = active.body, towerConnected = this.puddings.filter(p => p.scored).every(p => supported.has(p.body.id));
     const stable = towerConnected && supported.has(b.id) && b.speed < TUNING.stabilityThreshold && Math.abs(b.angularVelocity) < TUNING.angularStabilityThreshold;
-    if (stable) { if (this.confirmation === 0) this.state = 'CONFIRMING'; this.confirmation += delta; }
-    else { this.confirmation = 0; this.state = 'FALLING'; }
-    if (this.confirmation >= TUNING.confirmationMs) {
+    const confirmed = this.confirmation.update(stable, delta);
+    this.state = this.confirmation.pending ? 'CONFIRMING' : 'FALLING';
+    if (confirmed) {
       active.scored = true; this.score++; this.records.record(this.score);
       this.bestTowerSnapshot = { score: this.score, capturedAt: Date.now(), puddings: this.puddings.filter(p => p.scored).map(p => p.snapshot()) };
       this.sparkles(b.position.x, b.position.y - active.definition.height / 2, true); this.sfx.play('score'); this.active = undefined; this.spawn();

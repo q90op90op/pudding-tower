@@ -35,7 +35,22 @@ async function physicalTrace(page: Page) {
   return hashes;
 }
 
-test('Q 彈優化前後 22 層逐步物理軌跡完全相同', async ({ page }) => {
+test('使用舊落地規則重播時，22 層物理軌跡仍符合原始 Q 彈基準', async ({ page }) => {
+  // The landing fix intentionally changes spawn timing. Replay the historical
+  // confirmation policy only in this baseline test so it still detects changes
+  // to gravity, bodies, collisions or animation forces, without rewriting history.
+  await page.route('**/src/game/systems/LandingConfirmation.ts', route => route.fulfill({
+    contentType: 'application/javascript',
+    body: `export class LandingConfirmation {
+      constructor(durationMs) { this.durationMs = durationMs; this.stableMs = 0; }
+      get pending() { return this.stableMs > 0; }
+      reset() { this.stableMs = 0; }
+      update(stable, delta) {
+        this.stableMs = stable ? this.stableMs + delta : 0;
+        return stable && this.stableMs >= this.durationMs;
+      }
+    }`,
+  }));
   const hashes = await physicalTrace(page);
   const baseline = JSON.parse(await readFile('tests/fixtures/physics-before-jiggle.json', 'utf8'));
   expect(hashes).toEqual(baseline.hashes);
